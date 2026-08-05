@@ -2,7 +2,7 @@ name: Daily Resume Tailor
 
 on:
   schedule:
-    - cron: "30 13 * * *"   # 13:30 UTC = 19:00 IST daily (IST has no DST, this offset never needs adjustment)
+    - cron: "30 12 * * *"   # 12:30 UTC = 18:00 IST daily (IST has no DST, this offset never needs adjustment)
   workflow_dispatch: {}
 
 jobs:

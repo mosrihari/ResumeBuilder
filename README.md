@@ -4,7 +4,22 @@ Automates the second half of a daily job-search workflow:
 
 1. **9AM IST (external, not in this repo)** — a Sarvam "interactive portal" job runs job-search + market-research prompts and writes results into a Google Sheet (`Job_Application_Tracker`), one tab per day named `JobTracker_YYMMDD`.
 2. **You** mark the `Applied` column `TRUE` for any row you've applied to.
-3. **7PM IST (this repo, via GitHub Actions)** — reads today's tab, finds every row with `Applied == TRUE`, and for each one uses Sarvam's `sarvam-105b` model to generate tailored resume bullet points, a cover letter, and a referral request message against that specific job description — then writes the results back into the same row.
+3. **6PM IST (this repo, via GitHub Actions)** — reads today's tab, finds every row with `Applied == TRUE`, and for each one uses Sarvam's `sarvam-105b` model to generate tailored resume bullet points, a cover letter, and a referral request message against that specific job description — then writes the results back into the same row.
+
+## How it works
+
+```mermaid
+flowchart TD
+    A["9AM IST daily<br/>Sarvam interactive portal<br/>(external, not in this repo)"] -->|writes daily tab| B[("Google Sheet<br/>Job_Application_Tracker<br/>tab: JobTracker_YYMMDD")]
+    B --> C{"You mark<br/>Applied = TRUE<br/>on rows you applied to"}
+    C --> D["6PM IST daily<br/>GitHub Actions cron<br/>(resume_tailor.yml)"]
+    D --> E["Fetch detailed resume<br/>from Google Drive<br/>(.txt or PDF)"]
+    D --> F["Read today's tab<br/>filter rows where Applied == TRUE"]
+    E --> G["For each Job Description:<br/>call Sarvam sarvam-105b"]
+    F --> G
+    G --> H["Parse JSON response:<br/>resume_bullets, cover_letter,<br/>referral_request"]
+    H --> I[("Write back into the same row<br/>3 new columns in the sheet")]
+```
 
 ## Repo structure
 
@@ -22,7 +37,7 @@ src/
     resume_enhance_prompt.txt   # the LLM prompt template
   scratch/                # exploratory trial scripts (reference only, not used in production)
 .github/workflows/
-  resume_tailor.yml       # daily cron (7PM IST) + manual trigger
+  resume_tailor.yml       # daily cron (6PM IST) + manual trigger
 requirements.txt
 Dockerfile, docker-compose.yml
 ```
@@ -32,7 +47,7 @@ Dockerfile, docker-compose.yml
 - A Google Cloud **service account** with:
   - Access scopes: Google Drive (read) and Google Sheets
   - Shared as an editor on the `Job_Application_Tracker` Google Sheet
-  - Shared as a viewer on the Google Drive file containing your detailed resume (plain `.txt`)
+  - Shared as a viewer on the Google Drive file containing your detailed resume (plain `.txt` or a `.pdf` export both work)
 - A **Sarvam AI** API subscription key (`sarvam-105b` access)
 - Python 3.12+ (if running locally without Docker) or Docker
 
@@ -66,7 +81,7 @@ The pipeline is safe to run at any time: it always looks at the tab matching tod
 
 ## GitHub Actions (automated daily run)
 
-The workflow at `.github/workflows/resume_tailor.yml` runs daily at 13:30 UTC (19:00 IST) and can also be triggered manually.
+The workflow at `.github/workflows/resume_tailor.yml` runs daily at 12:30 UTC (18:00 IST) and can also be triggered manually.
 
 Before it can run, create these repository secrets (**Settings → Secrets and variables → Actions → New repository secret**):
 
@@ -93,3 +108,4 @@ The pipeline appends three more columns the first time it runs against a tab: `R
 - **`Worksheet '...' not found`** — today's tab hasn't been created yet by the 9AM job. Wait for it or check the upstream job.
 - **A row gets `ERROR: ...` in its Resume Bullet Points cell** — that row's Sarvam call or JSON parsing failed after retries; other rows are unaffected. Check the Actions run log for the full error.
 - **Sarvam returns empty content / `finish_reason=length`** — `sarvam-105b` is a reasoning model that can spend its whole token budget on internal reasoning before answering. `sarvam_client.py` already sets `reasoning_effort="low"` and `max_tokens=4096` (the starter-tier ceiling) to avoid this; if you're on a higher tier you can raise `SARVAM_MAX_TOKENS` in `config.py`.
+- **`UnicodeDecodeError` fetching the resume** — `drive_client.py` auto-detects PDF vs. plain text (by checking for the `%PDF-` header) and extracts text accordingly via `pypdf`. If this still fails, the Drive file may be some other binary format (e.g. `.docx`) that isn't supported yet.
