@@ -8,6 +8,7 @@ import config
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+from pypdf import PdfReader
 
 
 def _download_bytes(drive_service) -> bytes:
@@ -22,6 +23,11 @@ def _download_bytes(drive_service) -> bytes:
     return file_bytes.getvalue()
 
 
+def _extract_pdf_text(raw: bytes) -> str:
+    reader = PdfReader(io.BytesIO(raw))
+    return "\n".join(page.extract_text() or "" for page in reader.pages)
+
+
 def fetch_detailed_resume_text() -> str:
     if not config.DETAILED_RESUME_TXT_ID:
         raise ValueError("Missing environment variable: 'DETAILED_RESUME_TXT_ID' not found in .env")
@@ -31,13 +37,17 @@ def fetch_detailed_resume_text() -> str:
     )
     drive_service = build("drive", "v3", credentials=creds)
 
+    raw = _download_bytes(drive_service)
+    if raw.startswith(b"%PDF-"):
+        return _extract_pdf_text(raw)
+
     # Retry on UnicodeDecodeError: an occasional transient network hiccup can corrupt
     # a byte in transit, and a fresh download is the fix (not a real encoding issue).
     last_error = None
     for _ in range(3):
-        raw = _download_bytes(drive_service)
         try:
             return raw.decode("utf-8")
         except UnicodeDecodeError as e:
             last_error = e
+            raw = _download_bytes(drive_service)
     raise last_error
