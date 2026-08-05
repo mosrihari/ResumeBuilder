@@ -39,5 +39,6 @@ def fetch_detailed_resume_text() -> str:
         try:
             return raw.decode("utf-8")
         except UnicodeDecodeError as e:
+            print(f"DEBUG len={len(raw)} first80={raw[:80]!r}")
             last_error = e
     raise last_error
