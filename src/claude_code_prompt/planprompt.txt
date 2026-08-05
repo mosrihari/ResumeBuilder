@@ -1,0 +1,13 @@
+Below is the project I am planning to build
+1) I have Sarvam enabled in the interactive portal which periodically runs jobsearch prompt and market research prompt at 9AM IST and store it in Google sheets. Sheetname: Job_Application_Tracker
+2) The sheet name that it writes is JobTracker_YYMMDD . 
+3) At 7PM IST, This code should take in all the company with Job description where "Applied" column is True.
+4) Once you take the list of JD, take the detailed resume txt from the drive, modify the resume in such a way that it aligns with the JD (refer prompts/resume_enhance_prompt.txt)
+5) Once you get the bullet points, rewrite back to the google sheet with extra column, resume bullet points, cover letter for each JD and referral request.
+Plan everything in Github actions and it should run everyday without any interference
+Use sarvam-105B for this project to rewrite my resume.
+Environment values are stored in .env and scratch contains many trials of accessing the files and folder and how to call APIs. You can use it as reference but you dont have to strictly follow.
+
+/btw also add README files on how to setup this whole process and docker as well along with docker compose? If i share the repo, the user should just have docker with other setups and it should be good to go. What do you think?
+
+claude --resume a26eb6db-270f-4d97-81ac-59e685b3024e

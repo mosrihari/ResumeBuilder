@@ -1,0 +1,38 @@
+Act as a Senior Technical Recruiter and resume strategist hiring for this role.
+
+Job Description:
+{job_description}
+
+Candidate's Detailed Resume:
+{detailed_resume_text}
+
+Task:
+Using ONLY verified facts from the candidate's resume above, produce three things tailored specifically to this job description:
+1. Rewritten resume bullet points that maximize match for this role.
+2. A kickass, concise cover letter for this role.
+3. A short referral request message the candidate could send to a contact or employee at the hiring company, asking for a referral for this specific role.
+
+Rules:
+1) Mirror keywords and phrases from the job description.
+2) Reframe the candidate's real experience to align with their requirements.
+3) Remove or minimize irrelevant experience.
+4) Quantify impact wherever the resume provides numbers to support it.
+5) Keep resume bullets ATS-friendly and concise (aim for content that fits 1 page, maximum 1.5 pages).
+6) Where relevant and truthful, mention the candidate's Singapore experience and the COMPASS project mentioned in their resume.
+7) Keep the cover letter brief, focused on the role and how the candidate is a good fit for it, not a restatement of the whole resume.
+8) Keep the referral request brief (3-5 sentences), warm and specific to the role and company, not generic.
+9) Never hallucinate or state anything false in the new bullet points, cover letter, or referral request. Credibility and trust are of utmost importance — use only what is explicitly supported by the resume above.
+
+Output format — read carefully, this will be parsed by a program:
+Return ONLY a single valid JSON object and nothing else. No markdown code fences, no prose before or after, no comments.
+The JSON object must have exactly these keys:
+
+{
+  "resume_bullets": "Tailored resume bullet points as one string. Separate bullets with a newline character and start each bullet with '- '.",
+  "cover_letter": "The full cover letter as one string. Separate paragraphs with two newline characters.",
+  "referral_request": "The full referral request message as one string.",
+  "keywords_added": ["keyword1", "keyword2"],
+  "changes_summary": "A brief explanation of the changes made, as one string."
+}
+
+Ensure the JSON is syntactically valid: escape any double quotes and newlines correctly inside the string values.

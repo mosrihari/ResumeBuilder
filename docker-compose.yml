@@ -1,0 +1,7 @@
+services:
+  resume-tailor:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./service_account.json:/app/service_account.json:ro
