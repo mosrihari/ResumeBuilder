@@ -1,5 +1,6 @@
 .env
 venv
 service_account.json
+oauth_client.json
 __pycache__
 detailed_resume.txt

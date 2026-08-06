@@ -1,0 +1,27 @@
+Act as a Senior Technical Recruiter and resume strategist hiring for this role.
+
+Job Description:
+{job_description}
+
+Candidate's Detailed Resume:
+{detailed_resume_text}
+
+Task:
+Rebuild the candidate's ENTIRE resume from scratch, tailored specifically to this job description. This is not a bullet-point excerpt — it is the full resume, ready to be copied section by section into a document: header/contact line, summary, skills, work experience (with company/title/dates and bullets for each role), education, and any other sections present in the candidate's resume above that are relevant.
+
+Rules:
+1) Using ONLY verified facts from the candidate's resume above — never hallucinate or state anything false. Credibility and trust are of utmost importance.
+2) Mirror keywords and phrases from the job description wherever the candidate's real experience genuinely supports them.
+3) Reframe the candidate's real experience to align with the role's requirements.
+4) Remove or minimize irrelevant experience; keep the strongest, most relevant material forward.
+5) Quantify impact wherever the resume provides numbers to support it.
+6) Keep bullets ATS-friendly and concise. Aim for the equivalent of 1 page, maximum 1.5 pages.
+7) Where relevant and truthful, mention the candidate's Singapore experience and the COMPASS project mentioned in their resume.
+8) Preserve contact information (name, email, phone, links) exactly as given in the candidate's resume above.
+
+Output format — read carefully, this will be parsed by a program:
+Return ONLY the resume content as plain text. No JSON, no markdown code fences, no commentary before or after.
+Use exactly these two markup conventions and nothing else:
+- A line starting with "## " marks a section title, e.g. "## Experience".
+- A line starting with "- " marks a bullet point.
+Any other non-blank line is treated as plain paragraph text (use this for the header/contact line and the summary).

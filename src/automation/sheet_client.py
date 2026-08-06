@@ -31,16 +31,25 @@ def find_col(headers: list[str], name: str) -> int | None:
     return None
 
 
+def find_col_startswith(headers: list[str], prefix: str) -> int | None:
+    target = prefix.strip().lower()
+    for i, h in enumerate(headers, start=1):
+        if h.strip().lower().startswith(target):
+            return i
+    return None
+
+
 def ensure_output_headers(ws: gspread.Worksheet) -> dict[str, int]:
     headers = ws.row_values(2)
     existing = {h: find_col(headers, h) for h in config.OUTPUT_HEADERS}
-    if all(v is not None for v in existing.values()):
+    missing = [h for h, col in existing.items() if col is None]
+    if not missing:
         return existing
 
     start_col = len(headers) + 1
-    end_col = start_col + len(config.OUTPUT_HEADERS) - 1
+    end_col = start_col + len(missing) - 1
     cell_range = f"{gspread.utils.rowcol_to_a1(2, start_col)}:{gspread.utils.rowcol_to_a1(2, end_col)}"
-    ws.update([config.OUTPUT_HEADERS], cell_range)
+    ws.update([missing], cell_range)
 
     headers = ws.row_values(2)
     return {h: find_col(headers, h) for h in config.OUTPUT_HEADERS}
@@ -50,8 +59,11 @@ def get_applied_rows(ws: gspread.Worksheet) -> list[dict]:
     values = ws.get_all_values()
     headers = values[1]  # real header row is row 2 (index 1); row 1 is a section banner
     applied_col = find_col(headers, config.APPLIED_HEADER)
-    jd_col = find_col(headers, config.JD_HEADER)
+    # Match by prefix, not exact string: the external 9AM job's JD header text
+    # varies day to day ("Job Description" vs "Job Description (full JD text)").
+    jd_col = find_col_startswith(headers, "job description")
     company_col = find_col(headers, config.COMPANY_HEADER)
+    role_col = find_col(headers, config.ROLE_HEADER)
 
     if applied_col is None:
         raise RuntimeError(f"Could not find '{config.APPLIED_HEADER}' header in row 2 of the sheet.")
@@ -64,7 +76,13 @@ def get_applied_rows(ws: gspread.Worksheet) -> list[dict]:
             continue
         company = row[company_col - 1] if company_col and company_col <= len(row) else ""
         job_description = row[jd_col - 1] if jd_col and jd_col <= len(row) else ""
-        rows.append({"row_number": row_number, "company": company, "job_description": job_description})
+        role = row[role_col - 1] if role_col and role_col <= len(row) else ""
+        rows.append({
+            "row_number": row_number,
+            "company": company,
+            "job_description": job_description,
+            "role": role,
+        })
     return rows
 
 
@@ -84,4 +102,27 @@ def write_row_result(
 
 def write_row_error(ws: gspread.Worksheet, row_number: int, col_map: dict[str, int], message: str) -> None:
     cell_range = gspread.utils.rowcol_to_a1(row_number, col_map["Resume Bullet Points"])
+    ws.update([[f"ERROR: {message}"]], cell_range)
+
+
+def write_row_metadata(
+    ws: gspread.Worksheet,
+    row_number: int,
+    col_map: dict[str, int],
+    keywords_matched: str,
+    why_these_changes: str,
+) -> None:
+    start_col = col_map["Keywords Matched"]
+    end_col = col_map["Why These Changes"]
+    cell_range = f"{gspread.utils.rowcol_to_a1(row_number, start_col)}:{gspread.utils.rowcol_to_a1(row_number, end_col)}"
+    ws.update([[keywords_matched, why_these_changes]], cell_range)
+
+
+def write_docs_folder_link(ws: gspread.Worksheet, row_number: int, col_map: dict[str, int], folder_link: str) -> None:
+    cell_range = gspread.utils.rowcol_to_a1(row_number, col_map["Tailored Docs Folder"])
+    ws.update([[folder_link]], cell_range)
+
+
+def write_docs_error(ws: gspread.Worksheet, row_number: int, col_map: dict[str, int], message: str) -> None:
+    cell_range = gspread.utils.rowcol_to_a1(row_number, col_map["Tailored Docs Folder"])
     ws.update([[f"ERROR: {message}"]], cell_range)
