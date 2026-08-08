@@ -48,6 +48,8 @@ def ensure_output_headers(ws: gspread.Worksheet) -> dict[str, int]:
 
     start_col = len(headers) + 1
     end_col = start_col + len(missing) - 1
+    if end_col > ws.col_count:
+        ws.add_cols(end_col - ws.col_count)
     cell_range = f"{gspread.utils.rowcol_to_a1(2, start_col)}:{gspread.utils.rowcol_to_a1(2, end_col)}"
     ws.update([missing], cell_range)
 
