@@ -69,59 +69,61 @@ def main():
     print(f"Found {len(rows)} row(s) with Applied == TRUE.")
 
     if not rows:
-        print("Nothing to process. Done.")
-        return
+        print("Nothing to process.")
+    else:
+        sarvam = sarvam_client.get_client()
+        drive_write_service = drive_client.get_drive_write_service()
 
-    sarvam = sarvam_client.get_client()
-    drive_write_service = drive_client.get_drive_write_service()
+        failures = []
+        skipped = []
+        docs_failures = []
+        for row in rows:
+            company = row["company"] or f"row {row['row_number']}"
+            if not row["job_description"].strip():
+                print(f"[skip] {company} (row {row['row_number']}): empty job description")
+                skipped.append(company)
+                continue
 
-    failures = []
-    skipped = []
-    docs_failures = []
-    for row in rows:
-        company = row["company"] or f"row {row['row_number']}"
-        if not row["job_description"].strip():
-            print(f"[skip] {company} (row {row['row_number']}): empty job description")
-            skipped.append(company)
-            continue
+            try:
+                parsed = process_row(sarvam, resume_text, row)
+                sheet_client.write_row_result(
+                    ws,
+                    row["row_number"],
+                    col_map,
+                    parsed["resume_bullets"],
+                    parsed["cover_letter"],
+                    parsed["referral_request"],
+                )
+                keywords_matched = ", ".join(parsed.get("keywords_added") or [])
+                sheet_client.write_row_metadata(
+                    ws, row["row_number"], col_map, keywords_matched, parsed.get("changes_summary", "")
+                )
+                print(f"[ok] {company} (row {row['row_number']})")
+            except Exception as e:
+                print(f"[error] {company} (row {row['row_number']}): {e}")
+                sheet_client.write_row_error(ws, row["row_number"], col_map, str(e))
+                failures.append(company)
+                time.sleep(config.SARVAM_INTER_CALL_DELAY_SECONDS)
+                continue
 
-        try:
-            parsed = process_row(sarvam, resume_text, row)
-            sheet_client.write_row_result(
-                ws,
-                row["row_number"],
-                col_map,
-                parsed["resume_bullets"],
-                parsed["cover_letter"],
-                parsed["referral_request"],
-            )
-            keywords_matched = ", ".join(parsed.get("keywords_added") or [])
-            sheet_client.write_row_metadata(
-                ws, row["row_number"], col_map, keywords_matched, parsed.get("changes_summary", "")
-            )
-            print(f"[ok] {company} (row {row['row_number']})")
-        except Exception as e:
-            print(f"[error] {company} (row {row['row_number']}): {e}")
-            sheet_client.write_row_error(ws, row["row_number"], col_map, str(e))
-            failures.append(company)
+            try:
+                folder_link = generate_docs(sarvam, drive_write_service, resume_text, row, parsed["cover_letter"])
+                sheet_client.write_docs_folder_link(ws, row["row_number"], col_map, folder_link)
+                print(f"[docs ok] {company} (row {row['row_number']})")
+            except Exception as e:
+                print(f"[docs error] {company} (row {row['row_number']}): {e}")
+                sheet_client.write_docs_error(ws, row["row_number"], col_map, str(e))
+                docs_failures.append(company)
+
             time.sleep(config.SARVAM_INTER_CALL_DELAY_SECONDS)
-            continue
 
-        try:
-            folder_link = generate_docs(sarvam, drive_write_service, resume_text, row, parsed["cover_letter"])
-            sheet_client.write_docs_folder_link(ws, row["row_number"], col_map, folder_link)
-            print(f"[docs ok] {company} (row {row['row_number']})")
-        except Exception as e:
-            print(f"[docs error] {company} (row {row['row_number']}): {e}")
-            sheet_client.write_docs_error(ws, row["row_number"], col_map, str(e))
-            docs_failures.append(company)
+        succeeded = len(rows) - len(failures) - len(skipped)
+        print(f"Done. {succeeded} succeeded, {len(failures)} failed: {failures}, {len(skipped)} skipped: {skipped}")
+        if docs_failures:
+            print(f"  ({len(docs_failures)} row(s) had doc-generation failures despite succeeding overall: {docs_failures})")
 
-        time.sleep(config.SARVAM_INTER_CALL_DELAY_SECONDS)
-
-    succeeded = len(rows) - len(failures) - len(skipped)
-    print(f"Done. {succeeded} succeeded, {len(failures)} failed: {failures}, {len(skipped)} skipped: {skipped}")
-    if docs_failures:
-        print(f"  ({len(docs_failures)} row(s) had doc-generation failures despite succeeding overall: {docs_failures})")
+    ws.hide()
+    print(f"Hid worksheet tab '{ws.title}'.")
 
 
 if __name__ == "__main__":
