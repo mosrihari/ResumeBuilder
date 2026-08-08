@@ -4,7 +4,7 @@ Automates the second half of a daily job-search workflow:
 
 1. **9AM IST (external, not in this repo)** — a Sarvam "interactive portal" job runs job-search + market-research prompts and writes results into a Google Sheet (`Job_Application_Tracker`), one tab per day named `JobTracker_YYMMDD`.
 2. **You** mark the `Applied` column `TRUE` for any row you've applied to.
-3. **6PM IST (this repo, via GitHub Actions)** — reads today's tab, finds every row with `Applied == TRUE`, and for each one uses Sarvam's `sarvam-105b` model to generate tailored resume bullet points, a cover letter, and a referral request message against that specific job description — writes the results back into the same row, and also rebuilds the **entire tailored resume** plus the cover letter as `.docx` files, saved into a per-application folder in Google Drive. Once the run finishes, it hides today's tab (so the sheet's tab bar doesn't fill up with old dates) — this happens every run, even on days with 0 applied rows.
+3. **6PM IST (this repo, via GitHub Actions)** — reads today's tab, finds every row with `Applied == TRUE`, and for each one uses Sarvam's `sarvam-105b` model to generate tailored resume bullet points, a cover letter, and a referral request message against that specific job description — writes the results back into the same row, and also rebuilds the **entire tailored resume** plus the cover letter as `.docx` files, saved into a per-application folder in Google Drive. Once the run finishes, it hides every other tab in the spreadsheet, keeping only today's tab visible (so the sheet's tab bar doesn't fill up with old dates) — this happens every run, even on days with 0 applied rows.
 
 ## How it works
 
@@ -23,7 +23,7 @@ flowchart TD
     J --> K["Render .docx files:<br/>tailored resume + cover letter"]
     K --> L[("Google Drive:<br/>&lt;resume folder&gt;/&lt;Company&gt;_&lt;Role&gt;/<br/>SrihariMohan_Company_Role.docx<br/>+ _CoverLetter.docx")]
     L --> M[("Write Drive folder link<br/>into 4th column: Tailored Docs Folder")]
-    M --> N["Hide today's worksheet tab"]
+    M --> N["Hide every other tab,<br/>keep today's tab visible"]
     F -->|"0 applied rows"| N
 ```
 
@@ -96,7 +96,7 @@ docker compose run --rm resume-tailor
 ```
 This builds the image, mounts your `service_account.json` read-only, loads `.env`, and runs the pipeline once. It does not schedule anything by itself — scheduling is handled by GitHub Actions (see below) or you can trigger it manually whenever you want.
 
-The pipeline is safe to run at any time: it always looks at the tab matching today's date (`JobTracker_YYMMDD` in Asia/Kolkata time) and only touches rows where `Applied == TRUE`. If today's tab doesn't exist yet (the 9AM job hasn't run), it aborts cleanly with a clear error instead of guessing. At the end of every run it hides today's tab (`ws.hide()`) — re-running the same day still works fine (a hidden sheet is still readable/writable, `gc.open(...).worksheet(...)` finds it by name regardless), it just won't clutter the visible tab bar. Unhide it manually in Google Sheets (right-click the tab list → "Show hidden sheets") if you need to look at a past day's raw data.
+The pipeline is safe to run at any time: it always looks at the tab matching today's date (`JobTracker_YYMMDD` in Asia/Kolkata time) and only touches rows where `Applied == TRUE`. If today's tab doesn't exist yet (the 9AM job hasn't run), it aborts cleanly with a clear error instead of guessing. At the end of every run it hides every other tab in the spreadsheet, leaving only today's tab visible — re-running the same day is unaffected (a hidden sheet is still readable/writable by name). Unhide a past day manually in Google Sheets (right-click the tab list → "Show hidden sheets") if you need to look at its raw data.
 
 ## GitHub Actions (automated daily run)
 

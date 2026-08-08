@@ -128,3 +128,14 @@ def write_docs_folder_link(ws: gspread.Worksheet, row_number: int, col_map: dict
 def write_docs_error(ws: gspread.Worksheet, row_number: int, col_map: dict[str, int], message: str) -> None:
     cell_range = gspread.utils.rowcol_to_a1(row_number, col_map["Tailored Docs Folder"])
     ws.update([[f"ERROR: {message}"]], cell_range)
+
+
+def hide_other_worksheets(ws: gspread.Worksheet) -> list[str]:
+    """Hide every other tab in the spreadsheet, keeping only `ws` (today's tab) visible."""
+    hidden = []
+    for other in ws.spreadsheet.worksheets():
+        if other.id == ws.id or other.isSheetHidden:
+            continue
+        other.hide()
+        hidden.append(other.title)
+    return hidden

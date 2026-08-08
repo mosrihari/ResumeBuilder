@@ -2,6 +2,8 @@ import sys
 import time
 from pathlib import Path
 
+import gspread
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import config
 import docgen
@@ -122,8 +124,12 @@ def main():
         if docs_failures:
             print(f"  ({len(docs_failures)} row(s) had doc-generation failures despite succeeding overall: {docs_failures})")
 
-    ws.hide()
-    print(f"Hid worksheet tab '{ws.title}'.")
+    try:
+        hidden = sheet_client.hide_other_worksheets(ws)
+        if hidden:
+            print(f"Hid {len(hidden)} other tab(s): {hidden}")
+    except gspread.exceptions.APIError as e:
+        print(f"[warn] Could not hide other worksheet tabs: {e}")
 
 
 if __name__ == "__main__":
